@@ -26,7 +26,7 @@ def main(args):
 
     filename2i = {}
 
-    keys = ['image'] + [i for i in range(len(datasets))]
+    keys = ['image'] + list(range(len(datasets)))
     for img_i in indices:
         try:
             mask_fname = os.path.basename(datasets[0].mask_filenames[img_i])

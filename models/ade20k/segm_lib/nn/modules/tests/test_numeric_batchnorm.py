@@ -20,10 +20,7 @@ def handy_var(a, unbias=True):
     asum = a.sum(dim=0)
     as_sum = (a ** 2).sum(dim=0)  # a square sum
     sumvar = as_sum - asum * asum / n
-    if unbias:
-        return sumvar / (n - 1)
-    else:
-        return sumvar / n
+    return sumvar / (n - 1) if unbias else sumvar / n
 
 
 class NumericTestCase(TorchTestCase):

@@ -15,14 +15,20 @@ class MultidilatedConv(nn.Module):
             if equal_dim:
                 assert out_dim % dilation_num == 0
                 out_dims = [out_dim // dilation_num] * dilation_num
-                self.index = sum([[i + j * (out_dims[0]) for j in range(dilation_num)] for i in range(out_dims[0])], [])
+                self.index = sum(
+                    (
+                        [i + j * (out_dims[0]) for j in range(dilation_num)]
+                        for i in range(out_dims[0])
+                    ),
+                    [],
+                )
             else:
                 out_dims = [out_dim // 2 ** (i + 1) for i in range(dilation_num - 1)]
                 out_dims.append(out_dim - sum(out_dims))
                 index = []
                 starts = [0] + out_dims[:-1]
                 lengths = [out_dims[i] // out_dims[-1] for i in range(dilation_num)]
-                for i in range(out_dims[-1]):
+                for _ in range(out_dims[-1]):
                     for j in range(dilation_num):
                         index += list(range(starts[j], starts[j] + lengths[j]))
                         starts[j] += lengths[j]
@@ -49,10 +55,7 @@ class MultidilatedConv(nn.Module):
         conv_type = DepthWiseSeperableConv if use_depthwise else nn.Conv2d
         dilation = min_dilation
         for i in range(dilation_num):
-            if isinstance(padding, int):
-                cur_padding = padding * dilation
-            else:
-                cur_padding = padding[i]
+            cur_padding = padding * dilation if isinstance(padding, int) else padding[i]
             convs.append(conv_type(
                 self.in_dims[i], self.out_dims[i], kernel_size, padding=cur_padding, dilation=dilation, **kwargs
             ))
@@ -86,13 +89,6 @@ class MultidilatedConv(nn.Module):
                     start += dim
                 x = new_x
         for i, conv in enumerate(self.convs):
-            if self.cat_in:
-                input = x[i]
-            else:
-                input = x
+            input = x[i] if self.cat_in else x
             outs.append(conv(input))
-        if self.cat_out:
-            out = torch.cat(outs, dim=1)[:, self.index]
-        else:
-            out = sum(outs)
-        return out
+        return torch.cat(outs, dim=1)[:, self.index] if self.cat_out else sum(outs)

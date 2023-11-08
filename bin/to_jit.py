@@ -64,7 +64,7 @@ def main(predict_config: OmegaConf):
     print(f"Saving big-lama.pt model to {save_path}")
     traced_model.save(save_path)
 
-    print(f"Checking jit model output...")
+    print("Checking jit model output...")
     jit_model = torch.jit.load(str(save_path))
     jit_output = jit_model(image, mask)
     diff = (output - jit_output).abs().sum()

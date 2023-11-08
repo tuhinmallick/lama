@@ -18,7 +18,7 @@ def load_url(url, model_dir='./pretrained', map_location=None):
     filename = url.split('/')[-1]
     cached_file = os.path.join(model_dir, filename)
     if not os.path.exists(cached_file):
-        sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
+        sys.stderr.write(f'Downloading: "{url}" to {cached_file}\n')
         urlretrieve(url, cached_file)
     return torch.load(cached_file, map_location=map_location)
 
@@ -34,7 +34,4 @@ def color_encode(labelmap, colors, mode='RGB'):
             np.tile(colors[label],
                     (labelmap.shape[0], labelmap.shape[1], 1))
 
-    if mode == 'BGR':
-        return labelmap_rgb[:, :, ::-1]
-    else:
-        return labelmap_rgb
+    return labelmap_rgb[:, :, ::-1] if mode == 'BGR' else labelmap_rgb

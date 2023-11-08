@@ -36,7 +36,7 @@ def update_running_average(result: nn.Module, new_iterate_model: nn.Module, deca
         res_params = dict(result.named_parameters())
         new_params = dict(new_iterate_model.named_parameters())
 
-        for k in res_params.keys():
+        for k in res_params:
             res_params[k].data.mul_(decay).add_(new_params[k].data, alpha=1 - decay)
 
 
@@ -81,8 +81,7 @@ class BaseInpaintingTrainingModule(ptl.LightningModule):
             if not get_has_ddp_rank():
                 LOGGER.info(f'Discriminator\n{self.discriminator}')
 
-            extra_val = self.config.data.get('extra_val', ())
-            if extra_val:
+            if extra_val := self.config.data.get('extra_val', ()):
                 self.extra_val_titles = list(extra_val)
                 self.extra_evaluators = nn.ModuleDict({k: make_evaluator(**self.config.evaluator)
                                                        for k in extra_val})
@@ -102,7 +101,7 @@ class BaseInpaintingTrainingModule(ptl.LightningModule):
 
             if self.config.losses.get("mse", {"weight": 0})['weight'] > 0:
                 self.loss_mse = nn.MSELoss(reduction='none')
-            
+
             if self.config.losses.perceptual.weight > 0:
                 self.loss_pl = PerceptualLoss()
 
@@ -127,19 +126,17 @@ class BaseInpaintingTrainingModule(ptl.LightningModule):
             kwargs['ddp_kwargs'] = dict(num_replicas=self.trainer.num_nodes * self.trainer.num_processes,
                                         rank=self.trainer.global_rank,
                                         shuffle=True)
-        dataloader = make_default_train_dataloader(**self.config.data.train)
-        return dataloader
+        return make_default_train_dataloader(**self.config.data.train)
 
     def val_dataloader(self):
         res = [make_default_val_dataloader(**self.config.data.val)]
 
         if self.config.data.visual_test is not None:
-            res = res + [make_default_val_dataloader(**self.config.data.visual_test)]
+            res += [make_default_val_dataloader(**self.config.data.visual_test)]
         else:
-            res = res + res
+            res += res
 
-        extra_val = self.config.data.get('extra_val', ())
-        if extra_val:
+        if extra_val := self.config.data.get('extra_val', ()):
             res += [make_default_val_dataloader(**extra_val[k]) for k in self.extra_val_titles]
 
         return res
@@ -237,7 +234,7 @@ class BaseInpaintingTrainingModule(ptl.LightningModule):
         if optimizer_idx is None or optimizer_idx == 0:  # step for generator
             total_loss, metrics = self.generator_loss(batch)
 
-        elif optimizer_idx is None or optimizer_idx == 1:  # step for discriminator
+        elif optimizer_idx == 1:  # step for discriminator
             if self.config.losses.adversarial.weight > 0:
                 total_loss, metrics = self.discriminator_loss(batch)
 

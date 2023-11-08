@@ -206,7 +206,7 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
         # if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
         if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-2):
             m = np.max(np.abs(covmean.imag))
-            raise ValueError('Imaginary component {}'.format(m))
+            raise ValueError(f'Imaginary component {m}')
         covmean = covmean.real
 
     tr_covmean = np.trace(covmean)
@@ -269,7 +269,7 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
     """Calculates the FID of two paths"""
     for p in paths:
         if not os.path.exists(p):
-            raise RuntimeError('Invalid path: %s' % p)
+            raise RuntimeError(f'Invalid path: {p}')
 
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
@@ -281,9 +281,7 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
                                          dims, cuda)
     m2, s2 = _compute_statistics_of_path(paths[1], model, batch_size,
                                          dims, cuda)
-    fid_value = calculate_frechet_distance(m1, s1, m2, s2)
-
-    return fid_value
+    return calculate_frechet_distance(m1, s1, m2, s2)
 
 
 def calculate_fid_given_images(images, batch_size, cuda, dims, use_globals=False, keep_size=False):
@@ -291,9 +289,9 @@ def calculate_fid_given_images(images, batch_size, cuda, dims, use_globals=False
         global FID_MODEL  # for multiprocessing
 
     for imgs in images:
-        if isinstance(imgs, list) and isinstance(imgs[0], (Image.Image, JpegImagePlugin.JpegImageFile)):
-            pass
-        else:
+        if not isinstance(imgs, list) or not isinstance(
+            imgs[0], (Image.Image, JpegImagePlugin.JpegImageFile)
+        ):
             raise RuntimeError('Invalid images')
 
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
@@ -313,8 +311,7 @@ def calculate_fid_given_images(images, batch_size, cuda, dims, use_globals=False
                                         dims, cuda, keep_size=False)
     m2, s2 = _compute_statistics_of_images(images[1], model, batch_size,
                                         dims, cuda, keep_size=False)
-    fid_value = calculate_frechet_distance(m1, s1, m2, s2)
-    return fid_value
+    return calculate_frechet_distance(m1, s1, m2, s2)
 
 
 if __name__ == '__main__':

@@ -36,11 +36,14 @@ def main(args):
         if not args.indir.endswith('/'):
             args.indir += '/'
 
-        for in_img in glob.glob(os.path.join(args.indir, '**', '*' + args.img_suffix), recursive=True):
+        for in_img in glob.glob(os.path.join(args.indir, '**', f'*{args.img_suffix}'), recursive=True):
             if 'mask' in os.path.basename(in_img):
                 continue
 
-            out_img_path = os.path.join(args.outdir, os.path.splitext(in_img[len(args.indir):])[0] + '.png')
+            out_img_path = os.path.join(
+                args.outdir,
+                f'{os.path.splitext(in_img[len(args.indir):])[0]}.png',
+            )
             out_mask_path = f'{os.path.splitext(out_img_path)[0]}_mask.png'
 
             os.makedirs(os.path.dirname(out_img_path), exist_ok=True)

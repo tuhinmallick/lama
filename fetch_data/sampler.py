@@ -13,7 +13,7 @@ print(f'Sampling 2000 images out of {len(test_files)} images in {test_files_path
 print('Our training procedure will pick best checkpoints according to metrics, computed on these images.')
 
 random.shuffle(test_files)
-test_files_random = test_files[0:2000]
+test_files_random = test_files[:2000]
 with open(list_of_random_test_files, 'w') as fw:
     for filename in test_files_random:
         fw.write(filename+'\n')
@@ -34,7 +34,7 @@ print(f'Sampling 100 images out of {len(val_files)} in {val_files_path} ' + \
 print('We use these images for visual check up of evolution of inpainting algorithm epoch to epoch' )
 
 random.shuffle(val_files)
-val_files_random = val_files[0:100]
+val_files_random = val_files[:100]
 with open(list_of_random_val_files, 'w') as fw:
     for filename in val_files_random:
         fw.write(filename+'\n')

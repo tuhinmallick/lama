@@ -111,7 +111,7 @@ def default_collate(batch):
         if _use_shared_memory:
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
-            numel = sum([x.numel() for x in batch])
+            numel = sum(x.numel() for x in batch)
             storage = batch[0].storage()._new_shared(numel)
             out = batch[0].new(storage)
         return torch.stack(batch, 0, out=out)
@@ -220,11 +220,7 @@ class DataLoaderIter(object):
 
             if self.pin_memory or self.timeout > 0:
                 self.data_queue = queue.Queue()
-                if self.pin_memory:
-                    maybe_device_id = torch.cuda.current_device()
-                else:
-                    # do not initialize cuda context if not necessary
-                    maybe_device_id = None
+                maybe_device_id = torch.cuda.current_device() if self.pin_memory else None
                 self.worker_manager_thread = threading.Thread(
                     target=_worker_manager_loop,
                     args=(self.worker_result_queue, self.data_queue, self.done_event, self.pin_memory,
@@ -250,13 +246,12 @@ class DataLoaderIter(object):
         return len(self.batch_sampler)
 
     def _get_batch(self):
-        if self.timeout > 0:
-            try:
-                return self.data_queue.get(timeout=self.timeout)
-            except queue.Empty:
-                raise RuntimeError('DataLoader timed out after {} seconds'.format(self.timeout))
-        else:
+        if self.timeout <= 0:
             return self.data_queue.get()
+        try:
+            return self.data_queue.get(timeout=self.timeout)
+        except queue.Empty:
+            raise RuntimeError(f'DataLoader timed out after {self.timeout} seconds')
 
     def __next__(self):
         if self.num_workers == 0:  # same-process loading
@@ -409,10 +404,7 @@ class DataLoader(object):
 
         if batch_sampler is None:
             if sampler is None:
-                if shuffle:
-                    sampler = RandomSampler(dataset)
-                else:
-                    sampler = SequentialSampler(dataset)
+                sampler = RandomSampler(dataset) if shuffle else SequentialSampler(dataset)
             batch_sampler = BatchSampler(sampler, batch_size, drop_last)
 
         self.sampler = sampler

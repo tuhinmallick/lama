@@ -19,7 +19,7 @@ def main(args):
         good_categories = None
     else:
         with open(args.categories, 'r') as f:
-            good_categories = set(line.strip().split(' ')[0] for line in f if line.strip())
+            good_categories = {line.strip().split(' ')[0] for line in f if line.strip()}
 
     all_input_files = list(braceexpand.braceexpand(args.infile))
     chunk_size = int(math.ceil(len(all_input_files) / args.n_read_streams))
@@ -32,7 +32,7 @@ def main(args):
     step_i = 0
     good_samples = 0
     bad_samples = 0
-    while len(good_readers) > 0:
+    while good_readers:
         if step_i % args.print_freq == 0:
             print(f'Iterations done {step_i}; readers alive {good_readers}; good samples {good_samples}; bad samples {bad_samples}')
 

@@ -28,8 +28,7 @@ class FakeFakesGenerator:
         permuted = input_images[torch.randperm(batch_size)]
         augmented = self.img_aug(input_images)
         is_aug = (torch.rand(batch_size, device=input_images.device)[:, None, None, None] < self.aug_proba).float()
-        result = augmented * is_aug + permuted * (1 - is_aug)
-        return result
+        return augmented * is_aug + permuted * (1 - is_aug)
 
     def _fill_masks_with_gradient(self, masks):
         batch_size, _, height, width = masks.shape

@@ -27,8 +27,7 @@ class BlurMask(nn.Module):
 
     def forward(self, real_img, pred_img, mask):
         with torch.no_grad():
-            result = self.filter(mask) * mask
-            return result
+            return self.filter(mask) * mask
 
 
 class EmulatedEDTMask(nn.Module):
@@ -44,8 +43,7 @@ class EmulatedEDTMask(nn.Module):
         with torch.no_grad():
             known_mask = 1 - mask
             dilated_known_mask = (self.dilate_filter(known_mask) > 1).float()
-            result = self.blur_filter(1 - dilated_known_mask) * mask
-            return result
+            return self.blur_filter(1 - dilated_known_mask) * mask
 
 
 class PropagatePerceptualSim(nn.Module):
@@ -95,7 +93,7 @@ class PropagatePerceptualSim(nn.Module):
 
             cur_knowness = 1 - mask_scaled
 
-            for iter_i in range(self.max_iters):
+            for _ in range(self.max_iters):
                 new_top_knowness = F.pad(cur_knowness[:, :, :-1] * vertical_sim, (0, 0, 1, 0), mode='replicate')
                 new_bottom_knowness = F.pad(cur_knowness[:, :, 1:] * vertical_sim, (0, 0, 0, 1), mode='replicate')
 
@@ -109,9 +107,7 @@ class PropagatePerceptualSim(nn.Module):
                 cur_knowness = torch.max(cur_knowness, new_knowness)
 
             cur_knowness = F.interpolate(cur_knowness, size=mask.shape[-2:], mode='bilinear')
-            result = torch.min(mask, 1 - cur_knowness)
-
-            return result
+            return torch.min(mask, 1 - cur_knowness)
 
 
 def make_mask_distance_weighter(kind='none', **kwargs):

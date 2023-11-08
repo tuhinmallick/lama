@@ -39,8 +39,10 @@ def create_rectangle_mask(height, width):
 class Model():
     def __call__(self, img_batch, mask_batch):
         mean = (img_batch * mask_batch[:, None, :, :]).sum(dim=(2, 3)) / mask_batch.sum(dim=(1, 2))[:, None]
-        inpainted = mean[:, :, None, None] * (1 - mask_batch[:, None, :, :]) + img_batch * mask_batch[:, None, :, :]
-        return inpainted
+        return (
+            mean[:, :, None, None] * (1 - mask_batch[:, None, :, :])
+            + img_batch * mask_batch[:, None, :, :]
+        )
 
 
 class SimpleImageSquareMaskDataset(Dataset):
