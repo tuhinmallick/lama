@@ -11,7 +11,7 @@ print(f'Sampling 30000 images out of {len(val_files)} images in {val_files_path}
 print('In our paper we evaluate trained models on these 30k sampled (mask,image) pairs in our paper (check Sup. mat.)')
 
 random.shuffle(val_files)
-val_files_random = val_files[0:30000]
+val_files_random = val_files[:30000]
 
 with open(list_of_random_val_files, 'w') as fw:
     for filename in val_files_random:

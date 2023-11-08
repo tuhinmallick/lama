@@ -27,8 +27,7 @@ class LearnableSpatialTransformWrapper(nn.Module):
         height, width = x.shape[2:]
         pad_h, pad_w = int(height * self.pad_coef), int(width * self.pad_coef)
         x_padded = F.pad(x, [pad_w, pad_w, pad_h, pad_h], mode='reflect')
-        x_padded_rotated = rotate(x_padded, angle=self.angle.to(x_padded))
-        return x_padded_rotated
+        return rotate(x_padded, angle=self.angle.to(x_padded))
 
     def inverse_transform(self, y_padded_rotated, orig_x):
         height, width = orig_x.shape[2:]
@@ -36,8 +35,7 @@ class LearnableSpatialTransformWrapper(nn.Module):
 
         y_padded = rotate(y_padded_rotated, angle=-self.angle.to(y_padded_rotated))
         y_height, y_width = y_padded.shape[2:]
-        y = y_padded[:, :, pad_h : y_height - pad_h, pad_w : y_width - pad_w]
-        return y
+        return y_padded[:, :, pad_h : y_height - pad_h, pad_w : y_width - pad_w]
 
 
 if __name__ == '__main__':

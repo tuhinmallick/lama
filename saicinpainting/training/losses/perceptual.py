@@ -107,7 +107,12 @@ class ResNetPL(nn.Module):
         pred_feats = self.impl(pred, return_feature_maps=True)
         target_feats = self.impl(target, return_feature_maps=True)
 
-        result = torch.stack([F.mse_loss(cur_pred, cur_target)
-                              for cur_pred, cur_target
-                              in zip(pred_feats, target_feats)]).sum() * self.weight
-        return result
+        return (
+            torch.stack(
+                [
+                    F.mse_loss(cur_pred, cur_target)
+                    for cur_pred, cur_target in zip(pred_feats, target_feats)
+                ]
+            ).sum()
+            * self.weight
+        )

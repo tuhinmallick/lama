@@ -66,7 +66,7 @@ class ModelBuilder:
 
     @staticmethod
     def build_encoder(arch='resnet50dilated', fc_dim=512, weights=''):
-        pretrained = True if len(weights) == 0 else False
+        pretrained = len(weights) == 0
         arch = arch.lower()
         if arch == 'mobilenetv2dilated':
             orig_mobilenet = mobilenet.__dict__['mobilenetv2'](pretrained=pretrained)
@@ -207,10 +207,7 @@ class SegmentationModule(nn.Module):
         fmaps = self.encoder(img_data, return_feature_maps=True)
         pred = self.decoder(fmaps, segSize=segSize)
 
-        if self.return_feature_maps:
-            return pred, fmaps
-        # print("BINARY", img_data.shape, pred.shape)
-        return pred
+        return (pred, fmaps) if self.return_feature_maps else pred
 
     def multi_mask_from_multiclass(self, pred, classes):
         def isin(ar1, ar2):
@@ -269,10 +266,7 @@ class SegmentationModule(nn.Module):
 
             _, pred = torch.max(scores, dim=1)
 
-            if self.return_feature_maps:
-                return features
-
-            return pred, result
+            return features if self.return_feature_maps else (pred, result)
 
     def get_edges(self, t):
         edge = torch.cuda.ByteTensor(t.size()).zero_()
@@ -281,9 +275,7 @@ class SegmentationModule(nn.Module):
         edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
         edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
 
-        if True:
-            return edge.half()
-        return edge.float()
+        return edge.half()
 
 
 # pyramid pooling, deep supervision
@@ -296,13 +288,15 @@ class PPMDeepsup(nn.Module):
         self.drop_last_conv = drop_last_conv
 
         self.ppm = []
-        for scale in pool_scales:
-            self.ppm.append(nn.Sequential(
+        self.ppm.extend(
+            nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
                 nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
                 BatchNorm2d(512),
-                nn.ReLU(inplace=True)
-            ))
+                nn.ReLU(inplace=True),
+            )
+            for scale in pool_scales
+        )
         self.ppm = nn.ModuleList(self.ppm)
         self.cbr_deepsup = conv3x3_bn_relu(fc_dim // 2, fc_dim // 4, 1)
 
@@ -322,34 +316,37 @@ class PPMDeepsup(nn.Module):
 
         input_size = conv5.size()
         ppm_out = [conv5]
-        for pool_scale in self.ppm:
-            ppm_out.append(nn.functional.interpolate(
+        ppm_out.extend(
+            nn.functional.interpolate(
                 pool_scale(conv5),
                 (input_size[2], input_size[3]),
-                mode='bilinear', align_corners=False))
+                mode='bilinear',
+                align_corners=False,
+            )
+            for pool_scale in self.ppm
+        )
         ppm_out = torch.cat(ppm_out, 1)
 
         if self.drop_last_conv:
             return ppm_out
-        else:
-            x = self.conv_last(ppm_out)
+        x = self.conv_last(ppm_out)
 
-            if self.use_softmax:  # is True during inference
-                x = nn.functional.interpolate(
-                    x, size=segSize, mode='bilinear', align_corners=False)
-                x = nn.functional.softmax(x, dim=1)
-                return x
+        if self.use_softmax:  # is True during inference
+            x = nn.functional.interpolate(
+                x, size=segSize, mode='bilinear', align_corners=False)
+            x = nn.functional.softmax(x, dim=1)
+            return x
 
-            # deep sup
-            conv4 = conv_out[-2]
-            _ = self.cbr_deepsup(conv4)
-            _ = self.dropout_deepsup(_)
-            _ = self.conv_last_deepsup(_)
+        # deep sup
+        conv4 = conv_out[-2]
+        _ = self.cbr_deepsup(conv4)
+        _ = self.dropout_deepsup(_)
+        _ = self.conv_last_deepsup(_)
 
-            x = nn.functional.log_softmax(x, dim=1)
-            _ = nn.functional.log_softmax(_, dim=1)
+        x = nn.functional.log_softmax(x, dim=1)
+        _ = nn.functional.log_softmax(_, dim=1)
 
-            return (x, _)
+        return (x, _)
 
 
 class Resnet(nn.Module):
@@ -373,21 +370,21 @@ class Resnet(nn.Module):
         self.layer4 = orig_resnet.layer4
 
     def forward(self, x, return_feature_maps=False):
-        conv_out = []
-
         x = self.relu1(self.bn1(self.conv1(x)))
         x = self.relu2(self.bn2(self.conv2(x)))
         x = self.relu3(self.bn3(self.conv3(x)))
         x = self.maxpool(x)
 
-        x = self.layer1(x); conv_out.append(x);
-        x = self.layer2(x); conv_out.append(x);
-        x = self.layer3(x); conv_out.append(x);
-        x = self.layer4(x); conv_out.append(x);
+        x = self.layer1(x)
+        conv_out = [x]
+        x = self.layer2(x)
+        conv_out.append(x);
+        x = self.layer3(x)
+        conv_out.append(x);
+        x = self.layer4(x)
+        conv_out.append(x);
 
-        if return_feature_maps:
-            return conv_out
-        return [x]
+        return conv_out if return_feature_maps else [x]
 
 # Resnet Dilated
 class ResnetDilated(nn.Module):
@@ -429,22 +426,18 @@ class ResnetDilated(nn.Module):
                 if m.kernel_size == (3, 3):
                     m.dilation = (dilate // 2, dilate // 2)
                     m.padding = (dilate // 2, dilate // 2)
-            # other convoluions
-            else:
-                if m.kernel_size == (3, 3):
-                    m.dilation = (dilate, dilate)
-                    m.padding = (dilate, dilate)
+            elif m.kernel_size == (3, 3):
+                m.dilation = (dilate, dilate)
+                m.padding = (dilate, dilate)
 
     def forward(self, x, return_feature_maps=False):
-        conv_out = []
-
         x = self.relu1(self.bn1(self.conv1(x)))
         x = self.relu2(self.bn2(self.conv2(x)))
         x = self.relu3(self.bn3(self.conv3(x)))
         x = self.maxpool(x)
 
         x = self.layer1(x)
-        conv_out.append(x)
+        conv_out = [x]
         x = self.layer2(x)
         conv_out.append(x)
         x = self.layer3(x)
@@ -452,9 +445,7 @@ class ResnetDilated(nn.Module):
         x = self.layer4(x)
         conv_out.append(x)
 
-        if return_feature_maps:
-            return conv_out
-        return [x]
+        return conv_out if return_feature_maps else [x]
 
 class MobileNetV2Dilated(nn.Module):
     def __init__(self, orig_net, dilate_scale=8):
@@ -491,24 +482,20 @@ class MobileNetV2Dilated(nn.Module):
                 if m.kernel_size == (3, 3):
                     m.dilation = (dilate//2, dilate//2)
                     m.padding = (dilate//2, dilate//2)
-            # other convoluions
-            else:
-                if m.kernel_size == (3, 3):
-                    m.dilation = (dilate, dilate)
-                    m.padding = (dilate, dilate)
+            elif m.kernel_size == (3, 3):
+                m.dilation = (dilate, dilate)
+                m.padding = (dilate, dilate)
 
     def forward(self, x, return_feature_maps=False):
-        if return_feature_maps:
-            conv_out = []
-            for i in range(self.total_idx):
-                x = self.features[i](x)
-                if i in self.down_idx:
-                    conv_out.append(x)
-            conv_out.append(x)
-            return conv_out
-
-        else:
+        if not return_feature_maps:
             return [self.features(x)]
+        conv_out = []
+        for i in range(self.total_idx):
+            x = self.features[i](x)
+            if i in self.down_idx:
+                conv_out.append(x)
+        conv_out.append(x)
+        return conv_out
 
 
 # last conv, deep supervision
@@ -532,24 +519,23 @@ class C1DeepSup(nn.Module):
 
         if self.drop_last_conv:
             return x
-        else:
-            x = self.conv_last(x)
+        x = self.conv_last(x)
 
-            if self.use_softmax:  # is True during inference
-                x = nn.functional.interpolate(
-                    x, size=segSize, mode='bilinear', align_corners=False)
-                x = nn.functional.softmax(x, dim=1)
-                return x
+        if self.use_softmax:  # is True during inference
+            x = nn.functional.interpolate(
+                x, size=segSize, mode='bilinear', align_corners=False)
+            x = nn.functional.softmax(x, dim=1)
+            return x
 
-            # deep sup
-            conv4 = conv_out[-2]
-            _ = self.cbr_deepsup(conv4)
-            _ = self.conv_last_deepsup(_)
+        # deep sup
+        conv4 = conv_out[-2]
+        _ = self.cbr_deepsup(conv4)
+        _ = self.conv_last_deepsup(_)
 
-            x = nn.functional.log_softmax(x, dim=1)
-            _ = nn.functional.log_softmax(_, dim=1)
+        x = nn.functional.log_softmax(x, dim=1)
+        _ = nn.functional.log_softmax(_, dim=1)
 
-            return (x, _)
+        return (x, _)
 
 
 # last conv
@@ -586,13 +572,15 @@ class PPM(nn.Module):
         self.use_softmax = use_softmax
 
         self.ppm = []
-        for scale in pool_scales:
-            self.ppm.append(nn.Sequential(
+        self.ppm.extend(
+            nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
                 nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
                 BatchNorm2d(512),
-                nn.ReLU(inplace=True)
-            ))
+                nn.ReLU(inplace=True),
+            )
+            for scale in pool_scales
+        )
         self.ppm = nn.ModuleList(self.ppm)
 
         self.conv_last = nn.Sequential(
@@ -609,11 +597,15 @@ class PPM(nn.Module):
 
         input_size = conv5.size()
         ppm_out = [conv5]
-        for pool_scale in self.ppm:
-            ppm_out.append(nn.functional.interpolate(
+        ppm_out.extend(
+            nn.functional.interpolate(
                 pool_scale(conv5),
                 (input_size[2], input_size[3]),
-                mode='bilinear', align_corners=False))
+                mode='bilinear',
+                align_corners=False,
+            )
+            for pool_scale in self.ppm
+        )
         ppm_out = torch.cat(ppm_out, 1)
 
         x = self.conv_last(ppm_out)

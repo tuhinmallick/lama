@@ -19,10 +19,7 @@ DROP_RULES = [
 
 
 def need_drop(tag):
-    for rule in DROP_RULES:
-        if rule.search(tag):
-            return True
-    return False
+    return any(rule.search(tag) for rule in DROP_RULES)
 
 
 def get_group_and_title(tag):

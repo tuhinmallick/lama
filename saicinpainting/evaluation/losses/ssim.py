@@ -63,12 +63,9 @@ class SSIM(torch.nn.Module):
         C2 = 0.03 ** 2
 
         ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / \
-                   ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+                       ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
 
-        if size_average:
-            return ssim_map.mean()
-
-        return ssim_map.mean(1).mean(1).mean(1)
+        return ssim_map.mean() if size_average else ssim_map.mean(1).mean(1).mean(1)
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         return

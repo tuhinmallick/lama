@@ -24,19 +24,23 @@ def generate_colors(nlabels, type='bright', first_color_black=False, last_color_
         return
 
     if verbose:
-        print('Number of labels: ' + str(nlabels))
+        print(f'Number of labels: {str(nlabels)}')
 
     # Generate color map for bright colors, based on hsv
     if type == 'bright':
-        randHSVcolors = [(np.random.uniform(low=0.0, high=1),
-                          np.random.uniform(low=0.2, high=1),
-                          np.random.uniform(low=0.9, high=1)) for i in range(nlabels)]
+        randHSVcolors = [
+            (
+                np.random.uniform(low=0.0, high=1),
+                np.random.uniform(low=0.2, high=1),
+                np.random.uniform(low=0.9, high=1),
+            )
+            for _ in range(nlabels)
+        ]
 
-        # Convert HSV list to RGB
-        randRGBcolors = []
-        for HSVcolor in randHSVcolors:
-            randRGBcolors.append(colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2]))
-
+        randRGBcolors = [
+            colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2])
+            for HSVcolor in randHSVcolors
+        ]
         if first_color_black:
             randRGBcolors[0] = [0, 0, 0]
 
@@ -45,13 +49,17 @@ def generate_colors(nlabels, type='bright', first_color_black=False, last_color_
 
         random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=nlabels)
 
-    # Generate soft pastel colors, by limiting the RGB spectrum
-    if type == 'soft':
+    elif type == 'soft':
         low = 0.6
         high = 0.95
-        randRGBcolors = [(np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high)) for i in range(nlabels)]
+        randRGBcolors = [
+            (
+                np.random.uniform(low=low, high=high),
+                np.random.uniform(low=low, high=high),
+                np.random.uniform(low=low, high=high),
+            )
+            for _ in range(nlabels)
+        ]
 
         if first_color_black:
             randRGBcolors[0] = [0, 0, 0]

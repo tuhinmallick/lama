@@ -57,7 +57,7 @@ class ResnetBlock(nn.Module):
         elif padding_type == 'zero':
             p = dilation
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError(f'padding [{padding_type}] is not implemented')
 
         if in_dim is None:
             in_dim = dim
@@ -76,7 +76,7 @@ class ResnetBlock(nn.Module):
         elif padding_type == 'zero':
             p = second_dilation
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError(f'padding [{padding_type}] is not implemented')
         conv_block += [conv_layer(dim, dim, kernel_size=3, padding=p, dilation=second_dilation, groups=groups),
                        norm_layer(dim)]
 
@@ -86,8 +86,7 @@ class ResnetBlock(nn.Module):
         x_before = x
         if self.in_dim is not None:
             x = self.input_conv(x)
-        out = x + self.conv_block(x_before)
-        return out
+        return x + self.conv_block(x_before)
 
 class ResnetBlock5x5(nn.Module):
     def __init__(self, dim, padding_type, norm_layer, activation=nn.ReLU(True), use_dropout=False, conv_kind='default',
@@ -119,7 +118,7 @@ class ResnetBlock5x5(nn.Module):
         elif padding_type == 'zero':
             p = dilation * 2
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError(f'padding [{padding_type}] is not implemented')
 
         if in_dim is None:
             in_dim = dim
@@ -138,7 +137,7 @@ class ResnetBlock5x5(nn.Module):
         elif padding_type == 'zero':
             p = second_dilation * 2
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+            raise NotImplementedError(f'padding [{padding_type}] is not implemented')
         conv_block += [conv_layer(dim, dim, kernel_size=5, padding=p, dilation=second_dilation, groups=groups),
                        norm_layer(dim)]
 
@@ -148,8 +147,7 @@ class ResnetBlock5x5(nn.Module):
         x_before = x
         if self.in_dim is not None:
             x = self.input_conv(x)
-        out = x + self.conv_block(x_before)
-        return out
+        return x + self.conv_block(x_before)
 
 
 class MultidilatedResnetBlock(nn.Module):
@@ -171,8 +169,7 @@ class MultidilatedResnetBlock(nn.Module):
         return nn.Sequential(*conv_block)
 
     def forward(self, x):
-        out = x + self.conv_block(x)
-        return out
+        return x + self.conv_block(x)
 
 
 class MultiDilatedGlobalGenerator(nn.Module):
@@ -398,21 +395,17 @@ class GlobalGenerator(nn.Module):
             # dilated blocks at the middle of the bottleneck sausage
             if i == n_blocks // 2 and dilated_blocks_n_middle is not None and dilated_blocks_n_middle > 0:
                 model += make_dil_blocks(dilated_blocks_n_middle, dilation_block_kind, dilated_block_kwargs)
-            
+
             if ffc_positions is not None and i in ffc_positions:
                 for _ in range(ffc_positions[i]):  # same position can occur more than once
                     model += [FFCResnetBlock(feats_num_bottleneck, padding_type, norm_layer, activation_layer=nn.ReLU,
                                              inline=True, **ffc_kwargs)]
 
-            if is_resblock_depthwise:
-                resblock_groups = feats_num_bottleneck
-            else:
-                resblock_groups = 1
-
+            resblock_groups = feats_num_bottleneck if is_resblock_depthwise else 1
             model += [ResnetBlock(feats_num_bottleneck, padding_type=padding_type, activation=activation,
                                     norm_layer=norm_layer, conv_kind=conv_kind, groups=resblock_groups,
                                     dilation=dilation, second_dilation=second_dilation)]
-            
+
 
         # dilated blocks at the end of the bottleneck sausage
         if dilated_blocks_n is not None and dilated_blocks_n > 0:
@@ -573,7 +566,7 @@ class NLayerDiscriminator(BaseDiscriminator):
                      nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
-        for n in range(1, n_layers):
+        for _ in range(1, n_layers):
             nf_prev = nf
             nf = min(nf * 2, 512)
 
@@ -599,12 +592,12 @@ class NLayerDiscriminator(BaseDiscriminator):
         sequence += [[nn.Conv2d(nf, 1, kernel_size=kw, stride=1, padding=padw)]]
 
         for n in range(len(sequence)):
-            setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+            setattr(self, f'model{str(n)}', nn.Sequential(*sequence[n]))
 
     def get_all_activations(self, x):
         res = [x]
         for n in range(self.n_layers + 2):
-            model = getattr(self, 'model' + str(n))
+            model = getattr(self, f'model{str(n)}')
             res.append(model(res[-1]))
         return res[1:]
 
@@ -624,7 +617,7 @@ class MultidilatedNLayerDiscriminator(BaseDiscriminator):
                      nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
-        for n in range(1, n_layers):
+        for _ in range(1, n_layers):
             nf_prev = nf
             nf = min(nf * 2, 512)
 
@@ -650,12 +643,12 @@ class MultidilatedNLayerDiscriminator(BaseDiscriminator):
         sequence += [[nn.Conv2d(nf, 1, kernel_size=kw, stride=1, padding=padw)]]
 
         for n in range(len(sequence)):
-            setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+            setattr(self, f'model{str(n)}', nn.Sequential(*sequence[n]))
 
     def get_all_activations(self, x):
         res = [x]
         for n in range(self.n_layers + 2):
-            model = getattr(self, 'model' + str(n))
+            model = getattr(self, f'model{str(n)}')
             res.append(model(res[-1]))
         return res[1:]
 

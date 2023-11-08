@@ -39,5 +39,6 @@ class CrossEntropy2d(nn.Module):
         target = target[target_mask]
         predict = predict.transpose(1, 2).transpose(2, 3).contiguous()
         predict = predict[target_mask.view(n, h, w, 1).repeat(1, 1, 1, c)].view(-1, c)
-        loss = F.cross_entropy(predict, target, weight=self.weights, reduction=self.reduction)
-        return loss
+        return F.cross_entropy(
+            predict, target, weight=self.weights, reduction=self.reduction
+        )

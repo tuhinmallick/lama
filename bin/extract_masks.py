@@ -12,8 +12,9 @@ def main(args):
         args.indir+fname for fname in  os.listdir(args.indir)]
 
     tgt_masks = [
-        args.outdir+fname[:-4] + f'_mask000.png' 
-            for fname in  os.listdir(args.indir)]
+        args.outdir + fname[:-4] + '_mask000.png'
+        for fname in os.listdir(args.indir)
+    ]
 
     for img_name, msk_name in zip(src_images, tgt_masks):
         #print(img)

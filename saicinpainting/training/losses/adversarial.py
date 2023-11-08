@@ -120,8 +120,7 @@ class NonSaturatingWithR1(BaseAdversarialLoss):
 
     def discriminator_loss(self, real_batch: torch.Tensor, fake_batch: torch.Tensor,
                            discr_real_pred: torch.Tensor, discr_fake_pred: torch.Tensor,
-                           mask=None) \
-            -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+                           mask=None) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
 
         real_loss = F.softplus(-discr_real_pred)
         grad_penalty = make_r1_gp(discr_real_pred, real_batch) * self.gp_coef
@@ -133,8 +132,8 @@ class NonSaturatingWithR1(BaseAdversarialLoss):
             # use_unmasked_for_discr=False only makes sense for fakes;
             # for reals there is no difference beetween two regions
             fake_loss = fake_loss * mask
-            if self.mask_as_fake_target:
-                fake_loss = fake_loss + (1 - mask) * F.softplus(-discr_fake_pred)
+        if self.mask_as_fake_target:
+            fake_loss = fake_loss + (1 - mask) * F.softplus(-discr_fake_pred)
 
         sum_discr_loss = real_loss + grad_penalty + fake_loss
         metrics = dict(discr_real_out=discr_real_pred.mean(),

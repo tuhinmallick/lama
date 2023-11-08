@@ -171,7 +171,7 @@ class FFC(nn.Module):
                  padding_type='reflect', gated=False, **spectral_kwargs):
         super(FFC, self).__init__()
 
-        assert stride == 1 or stride == 2, "Stride should be 1 or 2."
+        assert stride in [1, 2], "Stride should be 1 or 2."
         self.stride = stride
 
         in_cg = int(in_channels * ratio_gin)
@@ -297,9 +297,7 @@ class ConcatTupleLayer(nn.Module):
         assert isinstance(x, tuple)
         x_l, x_g = x
         assert torch.is_tensor(x_l) or torch.is_tensor(x_g)
-        if not torch.is_tensor(x_g):
-            return x_l
-        return torch.cat(x, dim=1)
+        return x_l if not torch.is_tensor(x_g) else torch.cat(x, dim=1)
 
 
 class FFCResNetGenerator(nn.Module):
@@ -411,12 +409,12 @@ class FFCNLayerDiscriminator(BaseDiscriminator):
         sequence += [[nn.Conv2d(nf, 1, kernel_size=kw, stride=1, padding=padw)]]
 
         for n in range(len(sequence)):
-            setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+            setattr(self, f'model{str(n)}', nn.Sequential(*sequence[n]))
 
     def get_all_activations(self, x):
         res = [x]
         for n in range(self.n_layers + 2):
-            model = getattr(self, 'model' + str(n))
+            model = getattr(self, f'model{str(n)}')
             res.append(model(res[-1]))
         return res[1:]
 
@@ -425,9 +423,6 @@ class FFCNLayerDiscriminator(BaseDiscriminator):
         feats = []
         for out in act[:-1]:
             if isinstance(out, tuple):
-                if torch.is_tensor(out[1]):
-                    out = torch.cat(out, dim=1)
-                else:
-                    out = out[0]
+                out = torch.cat(out, dim=1) if torch.is_tensor(out[1]) else out[0]
             feats.append(out)
         return act[-1], feats

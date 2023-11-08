@@ -9,8 +9,7 @@ def ssim_fid100_f1(metrics, fid_scale=100):
     ssim = metrics.loc['total', 'ssim']['mean']
     fid = metrics.loc['total', 'fid']['mean']
     fid_rel = max(0, fid_scale - fid) / fid_scale
-    f1 = 2 * ssim * fid_rel / (ssim + fid_rel + 1e-3)
-    return f1
+    return 2 * ssim * fid_rel / (ssim + fid_rel + 1e-3)
 
 
 def find_best_checkpoint(model_list, models_dir):

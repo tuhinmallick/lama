@@ -96,16 +96,16 @@ def main(predict_config: OmegaConf):
                         cur_feat = cur_feat.cpu().numpy()[0]
                         cur_feat *= 255
                         cur_feat = np.clip(cur_feat, 0, 255).astype('uint8')
-                        cv2.imwrite(cur_out_fname + f'_lev{level_i:02d}_norm.png', cur_feat)
+                        cv2.imwrite(f'{cur_out_fname}_lev{level_i:02d}_norm.png', cur_feat)
 
-                        # for channel_i in predict_config.channels:
-                        #
-                        #     cur_feat = cur_feats[0, channel_i].clone().detach().cpu().numpy()
-                        #     cur_feat -= cur_feat.min()
-                        #     cur_feat /= cur_feat.max()
-                        #     cur_feat *= 255
-                        #     cur_feat = np.clip(cur_feat, 0, 255).astype('uint8')
-                        #     cv2.imwrite(cur_out_fname + f'_lev{level_i}_ch{channel_i}.png', cur_feat)
+                                            # for channel_i in predict_config.channels:
+                                            #
+                                            #     cur_feat = cur_feats[0, channel_i].clone().detach().cpu().numpy()
+                                            #     cur_feat -= cur_feat.min()
+                                            #     cur_feat /= cur_feat.max()
+                                            #     cur_feat *= 255
+                                            #     cur_feat = np.clip(cur_feat, 0, 255).astype('uint8')
+                                            #     cv2.imwrite(cur_out_fname + f'_lev{level_i}_ch{channel_i}.png', cur_feat)
                     elif level_i >= max_level:
                         break
     except KeyboardInterrupt:

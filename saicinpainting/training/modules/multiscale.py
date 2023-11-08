@@ -31,7 +31,7 @@ class ResNetHead(nn.Module):
         mult = 2 ** n_downsampling
 
         ### resnet blocks
-        for i in range(n_blocks):
+        for _ in range(n_blocks):
             model += [ResnetBlock(ngf * mult, padding_type=padding_type, activation=activation, norm_layer=norm_layer,
                                   conv_kind=conv_kind)]
 
@@ -57,7 +57,7 @@ class ResNetTail(nn.Module):
             model.append(nn.Conv2d(add_in_proj, ngf * mult, kernel_size=1))
 
         ### resnet blocks
-        for i in range(n_blocks):
+        for _ in range(n_blocks):
             model += [ResnetBlock(ngf * mult, padding_type=padding_type, activation=activation, norm_layer=norm_layer,
                                   conv_kind=conv_kind)]
 
@@ -86,10 +86,7 @@ class ResNetTail(nn.Module):
     def forward(self, input, return_last_act=False):
         features = self.model(input)
         out = self.out_proj(features)
-        if return_last_act:
-            return out, features
-        else:
-            return out
+        return (out, features) if return_last_act else out
 
 
 class MultiscaleResNet(nn.Module):
@@ -99,10 +96,21 @@ class MultiscaleResNet(nn.Module):
                  out_cumulative=False, return_only_hr=False):
         super().__init__()
 
-        self.heads = nn.ModuleList([ResNetHead(input_nc, ngf=ngf, n_downsampling=n_downsampling,
-                                               n_blocks=n_blocks_head, norm_layer=norm_layer, padding_type=padding_type,
-                                               conv_kind=conv_kind, activation=activation)
-                                    for i in range(n_scales)])
+        self.heads = nn.ModuleList(
+            [
+                ResNetHead(
+                    input_nc,
+                    ngf=ngf,
+                    n_downsampling=n_downsampling,
+                    n_blocks=n_blocks_head,
+                    norm_layer=norm_layer,
+                    padding_type=padding_type,
+                    conv_kind=conv_kind,
+                    activation=activation,
+                )
+                for _ in range(n_scales)
+            ]
+        )
         tail_in_feats = ngf * (2 ** n_downsampling) + ngf
         self.tails = nn.ModuleList([ResNetTail(output_nc,
                                                ngf=ngf, n_downsampling=n_downsampling,
@@ -120,8 +128,7 @@ class MultiscaleResNet(nn.Module):
     def num_scales(self):
         return len(self.heads)
 
-    def forward(self, ms_inputs: List[torch.Tensor], smallest_scales_num: Optional[int] = None) \
-        -> Union[torch.Tensor, List[torch.Tensor]]:
+    def forward(self, ms_inputs: List[torch.Tensor], smallest_scales_num: Optional[int] = None) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
         :param ms_inputs: List of inputs of different resolutions from HR to LR
         :param smallest_scales_num: int or None, number of smallest scales to take at input
@@ -164,10 +171,7 @@ class MultiscaleResNet(nn.Module):
                 all_outputs_cum.append(cur_out_cum)
             all_outputs = all_outputs_cum
 
-        if self.return_only_hr:
-            return all_outputs[-1]
-        else:
-            return all_outputs[::-1]
+        return all_outputs[-1] if self.return_only_hr else all_outputs[::-1]
 
 
 class MultiscaleDiscriminatorSimple(nn.Module):
